@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>다 했어요</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 다정하고 또렷한 교실 게시판, 아이 손가락으로 누르기 쉬운 크기
+   IDEA: 교실 벽에 붙이는 '다 했어요' 칭찬판 — 네모 이름표가 동그란 칭찬 스티커로 바뀜
+   PICTURE: 5×4 이름표 판 자체가 그림 (마지막 줄 4칸 가운데 정렬)
+   COLOUR and TYPE: 하늘색 판 + 버터 노랑 네모 + 산호 분홍 동그라미 / Jua + Gowun Dodum
+   LAYOUT: 제목·진행 표시·초기화 한 줄, 그 아래 판이 화면 가득 */
+:root,:root[data-theme=dark],:root[data-theme=light]{color-scheme:light;
+ --bg:#ffeca8;
+ --board:#ffffff;
+ --ink:#3a3350;
+ --sub:#7a7290;
+ --sq:#d9f1ff;
+ --sqEdge:#a9dcf7;
+ --sqInk:#2b5878;
+ --ci:#ffb3c7;
+ --ciEdge:#ff8fae;
+ --ciInk:#ffffff;
+ --line:#f0c64a}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 "Gowun Dodum",system-ui,sans-serif;overflow:hidden;height:100vh;height:100dvh}
+.wrap{height:100%;max-width:1400px;margin:0 auto;padding:clamp(10px,2.4vmin,32px) clamp(10px,3vw,40px) clamp(16px,3.4vmin,40px);display:flex;flex-direction:column}
+header{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin-bottom:clamp(10px,2.2vmin,24px)}
+h1{font:400 clamp(28px,6vmin,56px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.01em}
+.count{font:400 clamp(16px,2.8vmin,24px)/1 Jua,sans-serif;color:var(--sub);flex:1 1 auto}
+.count b{color:var(--ciEdge);font-weight:400;font-size:1.25em}
+.reset{font:400 clamp(16px,2.6vmin,20px)/1 Jua,sans-serif;color:var(--ink);background:var(--board);border:3px solid var(--line);border-radius:999px;padding:10px 22px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 0 var(--line)}
+.reset:hover{border-color:var(--sub)}
+.reset:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+.reset:focus-visible,.kid:focus-visible{outline:4px solid #2f8fd6;outline-offset:4px}
+.reset svg{width:20px;height:20px}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.fs[hidden]{display:none}
+.board{flex:1 1 auto;min-height:0;display:grid;place-items:center;background:var(--board);border-radius:clamp(16px,3vmin,28px);padding:clamp(10px,2.6vmin,32px);box-shadow:12px 14px 28px rgba(150,105,0,.25)}
+.grid{--gap:16px;--cell:120px;width:calc(5 * var(--cell) + 4 * var(--gap));display:flex;flex-wrap:wrap;justify-content:center;gap:var(--gap)}
+.kid{flex:0 0 var(--cell);width:var(--cell);height:var(--cell);display:grid;place-items:center;position:relative;
+ border:0;padding:6px;cursor:pointer;font:400 calc(var(--cell) * .2)/1.1 Jua,sans-serif;color:var(--sqInk);
+ background:var(--sq);border-radius:calc(var(--cell) * .14);box-shadow:0 calc(var(--cell) * .045) 0 var(--sqEdge);
+ transition:border-radius .35s cubic-bezier(.5,1.6,.5,1),background-color .25s,box-shadow .25s,transform .12s;
+ -webkit-tap-highlight-color:transparent;user-select:none}
+.kid:active{transform:translateY(4px) scale(.97)}
+.kid.done{border-radius:50%;background:var(--ci);color:var(--ciInk);box-shadow:0 calc(var(--cell) * .045) 0 var(--ciEdge);text-shadow:0 1px 2px rgba(214,80,120,.45)}
+.kid .tick{position:absolute;top:10%;right:10%;width:26%;height:26%;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.5,1.8,.5,1)}
+.kid.done .tick{opacity:1;transform:scale(1)}
+.kid span{word-break:keep-all;text-align:center}
+@media(prefers-reduced-motion:reduce){.kid,.kid .tick{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header>
+  <h1>다 했어요</h1>
+  <div class="count" id="count" aria-live="polite"></div>
+  <div class="btns">
+  <button class="reset fs" id="fs" type="button">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+   <span id="fsLabel">전체화면</span>
+  </button>
+  <button class="reset" id="reset" type="button">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+   초기화
+  </button>
+  </div>
+ </header>
+ <main class="board">
+  <div class="grid" id="grid"></div>
+ </main>
+</div>
+<script>
+{
+ const names=['김태준','서지우','최인우','최승혁','최수현','정윤아','주윤슬','정연아','이주한','이준우','이다리나','서윤찬','송유한','송유란','박지유','김은후','조윤서','안서원','이연'].sort((a,b)=>a.localeCompare(b,'ko'));
+ const grid=document.getElementById('grid');
+ const count=document.getElementById('count');
+ const tick='<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><path d="M6.5 12.5l3.5 3.5 7-8" fill="none" stroke="#ff8fae" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+ grid.innerHTML=names.map((n,i)=>'<button class="kid" type="button" id="kid'+i+'" aria-pressed="false"><span></span>'+tick+'</button>').join('');
+ const kids=[...grid.querySelectorAll('.kid')];
+ kids.forEach((k,i)=>{k.querySelector('span').textContent=names[i]});
+ const update=()=>{
+  const d=kids.filter(k=>k.classList.contains('done')).length;
+  count.innerHTML='<b>'+d+'</b> / '+kids.length+'명 다 했어요';
+ };
+ grid.addEventListener('click',e=>{
+  const k=e.target.closest('.kid');if(!k)return;
+  const on=k.classList.toggle('done');
+  k.setAttribute('aria-pressed',on?'true':'false');
+  update();
+ });
+ document.getElementById('reset').addEventListener('click',()=>{
+  kids.forEach(k=>{k.classList.remove('done');k.setAttribute('aria-pressed','false')});
+  update();
+ });
+ const de=document.documentElement;
+ const fsBtn=document.getElementById('fs');
+ const fsLabel=document.getElementById('fsLabel');
+ const fsIcon=document.getElementById('fsIcon');
+ const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+ const canFs=!!(de.requestFullscreen||de.webkitRequestFullscreen)&&(document.fullscreenEnabled!==false||document.webkitFullscreenEnabled);
+ if(!canFs)fsBtn.hidden=true;
+ const fsSync=()=>{
+  const on=!!fsEl();
+  fsLabel.textContent=on?'전체화면 끄기':'전체화면';
+  fsIcon.setAttribute('d',on?'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5':'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5');
+ };
+ fsBtn.addEventListener('click',async()=>{
+  try{
+   if(fsEl()){await (document.exitFullscreen||document.webkitExitFullscreen).call(document)}
+   else{await (de.requestFullscreen||de.webkitRequestFullscreen).call(de)}
+  }catch(e){fsLabel.textContent='전체화면을 쓸 수 없어요'}
+ });
+ document.addEventListener('fullscreenchange',fsSync);
+ document.addEventListener('webkitfullscreenchange',fsSync);
+ const board=document.querySelector('.board');
+ const fit=()=>{
+  const cs=getComputedStyle(board);
+  const W=board.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const H=board.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  const gap=Math.max(6,Math.min(28,Math.min(W,H)*.035));
+  const cell=Math.max(30,Math.floor(Math.min((W-4*gap)/5,(H-3*gap-gap*.4)/4)));
+  grid.style.setProperty('--gap',gap+'px');
+  grid.style.setProperty('--cell',cell+'px');
+ };
+ const ro=new ResizeObserver(fit);ro.observe(board);
+ window.addEventListener('orientationchange',fit);
+ fit();
+ update();
+}
+</script>
+</body>
+</html>
