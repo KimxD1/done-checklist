@@ -29,10 +29,11 @@
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 "Gowun Dodum",system-ui,sans-serif;overflow:hidden;height:100vh;height:100dvh}
 .wrap{height:100%;max-width:1400px;margin:0 auto;padding:clamp(10px,2.4vmin,32px) clamp(10px,3vw,40px) clamp(16px,3.4vmin,40px);display:flex;flex-direction:column}
-header{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin-bottom:clamp(10px,2.2vmin,24px)}
-h1{font:400 clamp(28px,6vmin,56px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.01em}
-.count{font:400 clamp(16px,2.8vmin,24px)/1 Jua,sans-serif;color:var(--sub);flex:1 1 auto}
-.count b{color:var(--ciEdge);font-weight:400;font-size:1.25em}
+header{flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px 16px;margin-bottom:clamp(8px,2vmin,22px)}
+h1{grid-column:2;font:400 clamp(44px,10vmin,96px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.02em;text-align:center;white-space:nowrap}
+header .btns{grid-column:3;justify-self:end}
+@media(max-width:760px){header{grid-template-columns:1fr}h1,header .btns{grid-column:1;justify-self:center}}
+.stage{flex:1 1 auto;min-height:0;display:grid;place-items:center}
 .reset{font:400 clamp(16px,2.6vmin,20px)/1 Jua,sans-serif;color:var(--ink);background:var(--board);border:3px solid var(--line);border-radius:999px;padding:10px 22px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 0 var(--line)}
 .reset:hover{border-color:var(--sub)}
 .reset:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
@@ -40,7 +41,7 @@ h1{font:400 clamp(28px,6vmin,56px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.
 .reset svg{width:20px;height:20px}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
 .fs[hidden]{display:none}
-.board{flex:1 1 auto;min-height:0;display:grid;place-items:center;background:var(--board);border-radius:clamp(16px,3vmin,28px);padding:clamp(10px,2.6vmin,32px);box-shadow:12px 14px 28px rgba(150,105,0,.25)}
+.board{background:var(--board);border-radius:clamp(16px,3vmin,28px);padding:clamp(10px,2.6vmin,32px);box-shadow:12px 14px 28px rgba(150,105,0,.25)}
 .grid{--gap:16px;--cell:120px;width:calc(5 * var(--cell) + 4 * var(--gap));display:flex;flex-wrap:wrap;justify-content:center;gap:var(--gap)}
 .kid{flex:0 0 var(--cell);width:var(--cell);height:var(--cell);display:grid;place-items:center;position:relative;
  border:0;padding:6px;cursor:pointer;font:400 calc(var(--cell) * .2)/1.1 Jua,sans-serif;color:var(--sqInk);
@@ -59,7 +60,6 @@ h1{font:400 clamp(28px,6vmin,56px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.
 <div class="wrap">
  <header>
   <h1>다 했어요</h1>
-  <div class="count" id="count" aria-live="polite"></div>
   <div class="btns">
   <button class="reset fs" id="fs" type="button">
    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
@@ -71,22 +71,20 @@ h1{font:400 clamp(28px,6vmin,56px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.
   </button>
   </div>
  </header>
- <main class="board">
+ <main class="stage"><div class="board">
   <div class="grid" id="grid"></div>
- </main>
+ </div></main>
 </div>
 <script>
 {
  const names=['김태준','서지우','최인우','최승혁','최수현','정윤아','주윤슬','정연아','이주한','이준우','이다리나','서윤찬','송유한','송유란','박지유','김은후','조윤서','안서원','이연'].sort((a,b)=>a.localeCompare(b,'ko'));
  const grid=document.getElementById('grid');
- const count=document.getElementById('count');
  const tick='<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><path d="M6.5 12.5l3.5 3.5 7-8" fill="none" stroke="#ff8fae" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
  grid.innerHTML=names.map((n,i)=>'<button class="kid" type="button" id="kid'+i+'" aria-pressed="false"><span></span>'+tick+'</button>').join('');
  const kids=[...grid.querySelectorAll('.kid')];
  kids.forEach((k,i)=>{k.querySelector('span').textContent=names[i]});
  const update=()=>{
   const d=kids.filter(k=>k.classList.contains('done')).length;
-  count.innerHTML='<b>'+d+'</b> / '+kids.length+'명 다 했어요';
  };
  grid.addEventListener('click',e=>{
   const k=e.target.closest('.kid');if(!k)return;
@@ -118,17 +116,25 @@ h1{font:400 clamp(28px,6vmin,56px)/1.05 Jua,sans-serif;margin:0;letter-spacing:.
  });
  document.addEventListener('fullscreenchange',fsSync);
  document.addEventListener('webkitfullscreenchange',fsSync);
+ const stage=document.querySelector('.stage');
+ const header=document.querySelector('header');
  const board=document.querySelector('.board');
  const fit=()=>{
   const cs=getComputedStyle(board);
-  const W=board.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
-  const H=board.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  const W=stage.clientWidth*.9-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const H=stage.clientHeight*.9-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
   const gap=Math.max(6,Math.min(28,Math.min(W,H)*.035));
   const cell=Math.max(30,Math.floor(Math.min((W-4*gap)/5,(H-3*gap-gap*.4)/4)));
   grid.style.setProperty('--gap',gap+'px');
   grid.style.setProperty('--cell',cell+'px');
+  requestAnimationFrame(()=>{
+   header.style.transform='';
+   const h=header.getBoundingClientRect(),bt=board.getBoundingClientRect().top;
+   const shift=Math.max(0,bt/2-(h.top+h.height/2));
+   header.style.transform='translateY('+shift+'px)';
+  });
  };
- const ro=new ResizeObserver(fit);ro.observe(board);
+ const ro=new ResizeObserver(fit);ro.observe(stage);
  window.addEventListener('orientationchange',fit);
  fit();
  update();
